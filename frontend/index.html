@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UCH FyD | Catálogo</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #1f2937;
+      background: #f3f5f8;
+    }
+
+    header {
+      padding: 18px 8%;
+      color: white;
+      background: #173b63;
+    }
+
+    header strong { font-size: 1.25rem; }
+
+    main {
+      width: min(1000px, 90%);
+      margin: 38px auto;
+    }
+
+    .intro { margin-bottom: 24px; }
+
+    .intro h1 { margin-bottom: 8px; }
+
+    .search {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 24px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .catalog {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      padding: 20px;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 3px 12px #15223812;
+    }
+
+    .card h2 { margin-top: 0; font-size: 1.15rem; }
+    .price { font-size: 1.1rem; font-weight: bold; }
+    .stock { color: #526174; }
+
+    button {
+      width: 100%;
+      padding: 11px;
+      border: 0;
+      border-radius: 8px;
+      color: white;
+      background: #1769aa;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover { background: #125486; }
+
+    button:disabled {
+      background: #9aa6b2;
+      cursor: not-allowed;
+    }
+
+    #message {
+      min-height: 24px;
+      margin: 12px 0;
+      color: #176239;
+    }
+  </style>
+</head>
+<body>
+  <header><strong>UCH FyD</strong></header>
+
+  <main>
+    <section class="intro">
+      <h1>Catálogo de artículos</h1>
+      <p>Explorá los artículos disponibles.</p>
+    </section>
+
+    <label for="search">Buscar un artículo</label>
+    <input id="search" class="search" type="search"
+           placeholder="Escribí el nombre del artículo">
+
+    <p id="message" aria-live="polite"></p>
+    <section id="catalog" class="catalog" aria-label="Artículos"></section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
