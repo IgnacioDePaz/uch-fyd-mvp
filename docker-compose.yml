@@ -83,7 +83,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
+  frontend:
+    build: ./frontend
+    container_name: uch-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth-service
+      - core-service
 volumes:
   mongo-data:
   postgres-data:
