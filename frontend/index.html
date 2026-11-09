@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UCH-FyD MVP - Catálogo</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .article { border: 1px solid #ddd; padding: 15px; border-radius: 5px; text-align: center; }
+        #alert-box { display: none; padding: 10px; background-color: #ffcccc; color: #cc0000; margin-bottom: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Pedidos UCH-FyD</h1>
+        <div id="alert-box"></div>
+
+        <!-- Sección de Login -->
+        <div class="card" id="login-section">
+            <h2>Iniciar Sesión</h2>
+            <input type="email" id="email" placeholder="Correo electrónico">
+            <input type="password" id="password" placeholder="Contraseña">
+            <button onclick="login()">Ingresar</button>
+        </div>
+
+        <!-- Sección del Catálogo -->
+        <div class="card" id="catalog-section" style="display: none;">
+            <h2>Catálogo de Artículos</h2>
+            <button onclick="logout()" style="background-color: #dc3545; margin-bottom: 15px;">Cerrar Sesión</button>
+            <div class="grid" id="articles-grid"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
