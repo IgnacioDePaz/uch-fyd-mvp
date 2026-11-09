@@ -103,12 +103,12 @@ app.post("/orders", requireAuthentication, async (req, res) => {
     const orderResult = await client.query(
       `INSERT INTO orders
          (user_id, customer_name, article_code, quantity, unit_price, total_amount)
-       SELECT $1, $2, code, $3, unit_price, unit_price * $3
+       SELECT $1, $2, code, $3, unit_price, unit_price * $5
        FROM articles
        WHERE code = $4
        RETURNING order_number, order_date, user_id, customer_name,
                  article_code, quantity, unit_price, total_amount`,
-      [req.userId, customerName, cantidad, articleCode],
+      [req.userId, customerName, cantidad, articleCode, cantidad],
     );
 
     await client.query(
