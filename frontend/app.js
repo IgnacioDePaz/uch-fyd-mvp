@@ -1,6 +1,3 @@
-const AUTH_URL = 'http://localhost:3000';
-const CORE_URL = 'http://localhost:3001';
-
 window.onload = () => {
     if (localStorage.getItem('jwt_token')) {
         showCatalog();
@@ -19,7 +16,7 @@ async function login() {
     const password = document.getElementById('password').value;
 
     try {
-        const response = await fetch(`${AUTH_URL}/auth/login`, {
+        const response = await fetch('/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -31,7 +28,7 @@ async function login() {
             localStorage.setItem('jwt_token', data.token);
             showCatalog();
         } else {
-            showAlert(data.message || 'Error al iniciar sesión. ¿La cuenta está aprobada?');
+            showAlert(data.error || data.message || 'Error al iniciar sesión. ¿La cuenta está aprobada?');
         }
     } catch (error) {
         showAlert('Error de conexión con el servicio de autenticación.');
@@ -49,21 +46,25 @@ async function showCatalog() {
     document.getElementById('catalog-section').style.display = 'block';
     
     try {
-        const response = await fetch(`${CORE_URL}/catalog/articles`);
-        const articles = await response.json();
+        const response = await fetch('/catalog/articles');
+        const data = await response.json();
+        if (!response.ok) {
+            showAlert(data.error || 'Error al cargar el catálogo de productos.');
+            return;
+        }
         
         const grid = document.getElementById('articles-grid');
         grid.innerHTML = '';
         
-        articles.forEach(art => {
+        data.articles.forEach(art => {
             grid.innerHTML += `
                 <div class="article">
                     <h3>${art.nombre}</h3>
                     <p>Código: ${art.codigo}</p>
-                    <p>Precio: $${art.precio}</p>
-                    <p>Stock disponible: <b>${art.stock}</b></p>
-                    <button onclick="comprar('${art.codigo}')" ${art.stock <= 0 ? 'disabled' : ''}>
-                        ${art.stock > 0 ? 'Comprar 1' : 'Sin Stock'}
+                    <p>Precio: $${art.precioUnitario}</p>
+                    <p>Stock disponible: <b>${art.stockDisponible}</b></p>
+                    <button onclick="comprar('${art.codigo}')" ${art.stockDisponible <= 0 ? 'disabled' : ''}>
+                        ${art.stockDisponible > 0 ? 'Comprar 1' : 'Sin Stock'}
                     </button>
                 </div>
             `;
@@ -77,7 +78,7 @@ async function comprar(codigoArticulo) {
     const token = localStorage.getItem('jwt_token');
     
     try {
-        const response = await fetch(`${CORE_URL}/orders`, {
+        const response = await fetch('/orders', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -91,7 +92,7 @@ async function comprar(codigoArticulo) {
             showCatalog();
         } else {
             const data = await response.json();
-            showAlert('Error en la compra: ' + (data.message || 'Stock insuficiente.'));
+            showAlert('Error en la compra: ' + (data.error || data.message || 'Stock insuficiente.'));
             showCatalog();
         }
     } catch (error) {

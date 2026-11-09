@@ -86,11 +86,20 @@ services:
   frontend:
     build: ./frontend
     container_name: uch-frontend
+  gateway:
+    image: nginx:alpine
+    container_name: uch-gateway
     ports:
-      - "8080:80"
+      - "${GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro,Z
     depends_on:
-      - auth-service
-      - core-service
+      frontend:
+        condition: service_started
+      auth-service:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
 volumes:
   mongo-data:
   postgres-data:

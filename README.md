@@ -33,14 +33,14 @@ Variables requeridas: `DATABASE_URL` (conexión PostgreSQL) y `JWT_SECRET` (la m
 
 ## Levantar el MVP con Docker Compose
 
-Docker Compose levanta MongoDB, PostgreSQL, auth-service y core-service en una red privada, con volúmenes persistentes para las bases. El montaje del esquema de PostgreSQL usa la etiqueta `Z` para que Fedora/SELinux permita al contenedor leerlo:
+Docker Compose levanta MongoDB, PostgreSQL, auth-service, core-service, frontend y un gateway Nginx en una red privada, con volúmenes persistentes para las bases. El gateway publica la aplicación y enruta las solicitudes a los servicios. El montaje del esquema de PostgreSQL usa la etiqueta `Z` para que Fedora/SELinux permita al contenedor leerlo:
 
 1. Copiar `.env.example` a `.env` y reemplazar las claves de ejemplo por valores locales propios. No subir `.env` al repositorio.
 2. Ejecutar `docker compose up --build -d`.
-3. Comprobar el estado con `docker compose ps`; los servicios deben aparecer como `healthy`.
-4. Probar los endpoints: `curl http://localhost:3000/health` y `curl http://localhost:3001/health`.
+3. Comprobar el estado con `docker compose ps`; las bases y los servicios auth/core deben aparecer como `healthy`, y frontend/gateway como `running`.
+4. Abrir la aplicación en `http://localhost:8080` y comprobar los servicios con `curl http://localhost:3000/health` y `curl http://localhost:3001/health`.
 
-Auth queda disponible en `http://localhost:3000` y core en `http://localhost:3001`. PostgreSQL ejecuta `core-service/init.sql` al inicializar su volumen por primera vez; MongoDB y PostgreSQL conservan sus datos en volúmenes Docker. Para detener los servicios sin borrar datos: `docker compose down`. Para borrar también las bases locales: `docker compose down -v`.
+El frontend usa el gateway en el mismo origen: `/auth` y `/admin` se enrutan a auth-service, y `/catalog` y `/orders` a core-service. Auth y core también conservan sus puertos locales `3000` y `3001` para pruebas directas. PostgreSQL ejecuta `core-service/init.sql` al inicializar su volumen por primera vez; el script crea las tablas y carga 20 artículos de ejemplo. Si PostgreSQL ya tenía un volumen inicializado, los scripts de inicialización no se vuelven a ejecutar: carga el catálogo manualmente o recrea los datos locales con `docker compose down -v` (esto elimina los datos persistidos). MongoDB y PostgreSQL conservan sus datos en volúmenes Docker. Para detener los servicios sin borrar datos: `docker compose down`.
 
 Para registrar y aprobar una cuenta:
 
