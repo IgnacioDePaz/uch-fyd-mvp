@@ -14,6 +14,8 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
         .article { border: 1px solid #ddd; padding: 15px; border-radius: 5px; text-align: center; }
         #alert-box { display: none; padding: 10px; background-color: #ffcccc; color: #cc0000; margin-bottom: 15px; border-radius: 5px; }
+        #alert-box.success { background-color: #d4edda; color: #155724; }
+        .secondary-button { background-color: #6c757d; }
     </style>
 </head>
 <body>
@@ -27,15 +29,35 @@
             <input type="email" id="email" placeholder="Correo electrónico">
             <input type="password" id="password" placeholder="Contraseña">
             <button onclick="login()">Ingresar</button>
+            <button type="button" onclick="showRegister()" class="secondary-button">Crear cuenta</button>
         </div>
 
-        <!-- Sección del Catálogo -->
+        <div class="card" id="register-section" style="display: none;">
+            <h2>Crear cuenta</h2>
+            <form onsubmit="registerUser(event)">
+                <input type="text" id="register-name" placeholder="Nombre" maxlength="100" required>
+                <input type="email" id="register-email" placeholder="Correo electrónico" maxlength="254" required>
+                <input type="password" id="register-password" placeholder="Contraseña (mínimo 8 caracteres)" minlength="8" maxlength="72" required>
+                <button type="submit">Registrarme</button>
+            </form>
+            <p>La cuenta quedará pendiente de aprobación antes de que puedas iniciar sesión.</p>
+            <button type="button" onclick="showLogin()" class="secondary-button">Volver a iniciar sesión</button>
+        </div>
+
         <div class="card" id="catalog-section" style="display: none;">
             <h2>Catálogo de Artículos</h2>
             <button onclick="logout()" style="background-color: #dc3545; margin-bottom: 15px;">Cerrar Sesión</button>
             <div class="grid" id="articles-grid"></div>
         </div>
+
+        <div class="card" id="admin-section" style="display: none;">
+            <h2>Administración de usuarios</h2>
+            <button onclick="logout()" style="background-color: #dc3545; margin-bottom: 15px;">Cerrar Sesión</button>
+            <h3>Cuentas pendientes de aprobación</h3>
+            <div class="grid" id="pending-users"></div>
+            <p id="no-pending-users" style="display: none;">No hay cuentas pendientes.</p>
+        </div>
     </div>
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
 </body>
 </html>
