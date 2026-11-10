@@ -1,3 +1,4 @@
+# Construye y ejecuta el servicio Node.js de catálogo y pedidos en un contenedor.
 FROM node:20-alpine
 
 WORKDIR /app

@@ -1,3 +1,4 @@
+-- Crea las tablas del catálogo y los pedidos, y carga artículos de ejemplo.
 CREATE TABLE IF NOT EXISTS articles (
     code VARCHAR(64) PRIMARY KEY,
     name VARCHAR(160) NOT NULL,

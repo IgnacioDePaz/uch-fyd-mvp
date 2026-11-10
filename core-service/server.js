@@ -1,3 +1,4 @@
+// Servicio principal: consulta el catálogo y procesa pedidos autenticados.
 require("dotenv").config();
 
 const express = require("express");

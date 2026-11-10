@@ -1,3 +1,4 @@
+// Servicio de autenticación: registra e inicia sesiones, y permite administrar usuarios.
 require("dotenv").config();
 
 const crypto = require("node:crypto");

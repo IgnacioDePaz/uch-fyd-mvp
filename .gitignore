@@ -1,3 +1,4 @@
+# Excluye credenciales locales y dependencias instaladas del control de versiones.
 .env
 .env.*
 !.env.example

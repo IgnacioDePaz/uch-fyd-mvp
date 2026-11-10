@@ -1,3 +1,4 @@
+// Controla el registro, el inicio de sesión, el panel de aprobación y las compras.
 window.onload = () => {
     const token = localStorage.getItem('jwt_token');
     const role = localStorage.getItem('user_role');

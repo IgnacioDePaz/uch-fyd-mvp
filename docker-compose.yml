@@ -1,3 +1,4 @@
+# Define los contenedores, redes y volúmenes para ejecutar todo el MVP localmente.
 services:
   mongodb:
     image: mongo:7

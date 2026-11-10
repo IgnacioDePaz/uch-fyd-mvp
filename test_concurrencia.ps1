@@ -1,3 +1,4 @@
+# Envía compras en paralelo al servicio core para probar el manejo concurrente del stock.
 # Reemplaza ESTE_TOKEN por el JWT obtenido tras iniciar sesión
 $TOKEN = "ESTE_TOKEN"
 $CODIGO_ARTICULO = "ART-001"
