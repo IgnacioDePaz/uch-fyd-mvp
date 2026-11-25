@@ -117,25 +117,73 @@ async function showCatalog() {
             return;
         }
 
-        const grid = document.getElementById('articles-grid');
-        grid.innerHTML = '';
-
-        data.articles.forEach(art => {
-            grid.innerHTML += `
-                <div class="article">
-                    <h3>${art.nombre}</h3>
-                    <p>Código: ${art.codigo}</p>
-                    <p>Precio: $${art.precioUnitario}</p>
-                    <p>Stock disponible: <b>${art.stockDisponible}</b></p>
-                    <button onclick="comprar('${art.codigo}')" ${art.stockDisponible <= 0 ? 'disabled' : ''}>
-                        ${art.stockDisponible > 0 ? 'Comprar 1' : 'Sin Stock'}
-                    </button>
-                </div>
-            `;
-        });
+        renderArticles(document.getElementById('articles-grid'), data.articles);
+        await loadRecommendations();
     } catch (error) {
         showAlert('Error al cargar el catálogo de productos.');
     }
+}
+
+async function loadRecommendations() {
+    const token = localStorage.getItem('jwt_token');
+    const message = document.getElementById('recommendations-message');
+    const grid = document.getElementById('recommendations-grid');
+    message.textContent = 'Buscando artículos para recomendarte...';
+    grid.replaceChildren();
+
+    try {
+        const response = await fetch('/catalog/recommendations', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            message.textContent = '';
+            showAlert(data.error || 'No se pudieron cargar las recomendaciones.');
+            return;
+        }
+
+        renderArticles(grid, data.articles, true);
+        message.textContent = data.articles.length
+            ? 'Sugerencias basadas en tus compras y en los artículos más elegidos.'
+            : 'Por ahora no hay artículos disponibles para recomendar.';
+    } catch (error) {
+        message.textContent = '';
+        showAlert('Error de conexión al cargar las recomendaciones.');
+    }
+}
+
+function renderArticles(grid, articles, showReason = false) {
+    grid.replaceChildren();
+    articles.forEach(article => {
+        const card = document.createElement('div');
+        card.className = 'article';
+
+        const name = document.createElement('h3');
+        name.textContent = article.nombre;
+        const code = document.createElement('p');
+        code.textContent = `Código: ${article.codigo}`;
+        const price = document.createElement('p');
+        price.textContent = `Precio: $${article.precioUnitario}`;
+        const stock = document.createElement('p');
+        stock.append('Stock disponible: ');
+        const stockCount = document.createElement('b');
+        stockCount.textContent = article.stockDisponible;
+        stock.append(stockCount);
+
+        card.append(name, code, price, stock);
+        if (showReason && article.motivo) {
+            const reason = document.createElement('p');
+            reason.textContent = article.motivo;
+            card.append(reason);
+        }
+
+        const button = document.createElement('button');
+        button.textContent = article.stockDisponible > 0 ? 'Comprar 1' : 'Sin Stock';
+        button.disabled = article.stockDisponible <= 0;
+        button.addEventListener('click', () => comprar(article.codigo));
+        card.append(button);
+        grid.append(card);
+    });
 }
 
 async function showAdminPanel() {

@@ -45,6 +45,75 @@ app.get("/catalog/articles", async (_req, res) => {
   return res.json({ articles: result.rows });
 });
 
+app.get("/catalog/recommendations", requireAuthentication, async (req, res) => {
+  const result = await pool.query(
+    `WITH user_history AS (
+       SELECT DISTINCT article_code
+       FROM orders
+       WHERE user_id = $1
+     ),
+     similar_users AS (
+       SELECT other_orders.user_id,
+              COUNT(DISTINCT other_orders.article_code) AS shared_articles
+       FROM orders AS user_orders
+       JOIN orders AS other_orders
+         ON other_orders.article_code = user_orders.article_code
+        AND other_orders.user_id <> $1
+       WHERE user_orders.user_id = $1
+       GROUP BY other_orders.user_id
+     ),
+     collaborative_scores AS (
+       SELECT other_orders.article_code,
+              SUM(similar_users.shared_articles) AS score
+       FROM similar_users
+       JOIN (
+         SELECT DISTINCT user_id, article_code
+         FROM orders
+       ) AS other_orders ON other_orders.user_id = similar_users.user_id
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM user_history
+         WHERE user_history.article_code = other_orders.article_code
+       )
+       GROUP BY other_orders.article_code
+     ),
+     popularity AS (
+       SELECT article_code, SUM(quantity) AS units_sold
+       FROM orders
+       GROUP BY article_code
+     )
+     SELECT articles.code AS "codigo",
+            articles.name AS "nombre",
+            articles.stock AS "stockDisponible",
+            articles.unit_price AS "precioUnitario",
+            CASE
+              WHEN COALESCE(collaborative_scores.score, 0) > 0
+                THEN 'Clientes con compras similares también eligieron este artículo'
+              WHEN COALESCE(popularity.units_sold, 0) > 0
+                THEN 'Uno de los artículos más comprados'
+              ELSE 'Artículo disponible del catálogo'
+            END AS "motivo"
+     FROM articles
+     LEFT JOIN collaborative_scores
+       ON collaborative_scores.article_code = articles.code
+     LEFT JOIN popularity
+       ON popularity.article_code = articles.code
+     WHERE articles.stock > 0
+       AND NOT EXISTS (
+         SELECT 1
+         FROM user_history
+         WHERE user_history.article_code = articles.code
+       )
+     ORDER BY COALESCE(collaborative_scores.score, 0) DESC,
+              COALESCE(popularity.units_sold, 0) DESC,
+              articles.name,
+              articles.code
+     LIMIT 6`,
+    [req.userId],
+  );
+  return res.json({ articles: result.rows });
+});
+
 app.get("/catalog/articles/:code", async (req, res) => {
   const result = await pool.query(
     `SELECT code AS "codigo", name AS "nombre", stock AS "stockDisponible",
@@ -64,6 +133,7 @@ app.post("/orders", requireAuthentication, async (req, res) => {
   const { cliente, codigoArticulo, cantidad } = req.body || {};
   const customerName = typeof cliente === "string" ? cliente.trim() : "";
   const articleCode = typeof codigoArticulo === "string" ? codigoArticulo.trim() : "";
+  const idempotencyKey = req.get("Idempotency-Key");
 
   if (
     !customerName ||
@@ -71,10 +141,11 @@ app.post("/orders", requireAuthentication, async (req, res) => {
     !articleCode ||
     articleCode.length > 64 ||
     !Number.isSafeInteger(cantidad) ||
-    cantidad < 1
+    cantidad < 1 ||
+    (idempotencyKey !== undefined && !/^[\x21-\x7E]{1,128}$/.test(idempotencyKey))
   ) {
     return res.status(400).json({
-      error: "Datos inválidos: cliente, código de artículo y cantidad entera positiva son requeridos",
+      error: "Datos inválidos: cliente, código de artículo y cantidad entera positiva son requeridos; Idempotency-Key, si se envía, debe tener entre 1 y 128 caracteres ASCII imprimibles sin espacios",
     });
   }
 
@@ -84,6 +155,37 @@ app.post("/orders", requireAuthentication, async (req, res) => {
   try {
     await client.query("BEGIN");
     transactionOpen = true;
+
+    if (idempotencyKey !== undefined) {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [JSON.stringify([req.userId, idempotencyKey])],
+      );
+
+      const existingOrder = await client.query(
+        `SELECT order_number, order_date, user_id, customer_name,
+                article_code, quantity, unit_price, total_amount
+         FROM orders
+         WHERE user_id = $1 AND idempotency_key = $2`,
+        [req.userId, idempotencyKey],
+      );
+
+      if (existingOrder.rowCount > 0) {
+        await client.query("COMMIT");
+        transactionOpen = false;
+        const order = existingOrder.rows[0];
+        if (
+          order.customer_name !== customerName ||
+          order.article_code !== articleCode ||
+          order.quantity !== cantidad
+        ) {
+          return res.status(409).json({
+            error: "La clave de idempotencia ya fue utilizada con otros datos",
+          });
+        }
+        return res.status(201).json(formatOrder(order));
+      }
+    }
 
     const articleResult = await client.query(
       "SELECT code, stock FROM articles WHERE code = $1 FOR UPDATE",
@@ -103,13 +205,14 @@ app.post("/orders", requireAuthentication, async (req, res) => {
 
     const orderResult = await client.query(
       `INSERT INTO orders
-         (user_id, customer_name, article_code, quantity, unit_price, total_amount)
-       SELECT $1, $2, code, $3, unit_price, unit_price * $5
+         (user_id, customer_name, article_code, quantity, unit_price, total_amount,
+          idempotency_key)
+       SELECT $1, $2, code, $3, unit_price, unit_price * $6, $5
        FROM articles
        WHERE code = $4
        RETURNING order_number, order_date, user_id, customer_name,
                  article_code, quantity, unit_price, total_amount`,
-      [req.userId, customerName, cantidad, articleCode, cantidad],
+      [req.userId, customerName, cantidad, articleCode, idempotencyKey || null, cantidad],
     );
 
     await client.query(
@@ -120,16 +223,7 @@ app.post("/orders", requireAuthentication, async (req, res) => {
     transactionOpen = false;
 
     const order = orderResult.rows[0];
-    return res.status(201).json({
-      numero: order.order_number,
-      fecha: order.order_date,
-      usuario: order.user_id,
-      cliente: order.customer_name,
-      codigoArticulo: order.article_code,
-      cantidad: order.quantity,
-      precioUnitarioHistorico: order.unit_price,
-      importeTotal: order.total_amount,
-    });
+    return res.status(201).json(formatOrder(order));
   } catch (error) {
     if (transactionOpen) {
       try {
@@ -143,6 +237,19 @@ app.post("/orders", requireAuthentication, async (req, res) => {
     client.release();
   }
 });
+
+function formatOrder(order) {
+  return {
+    numero: order.order_number,
+    fecha: order.order_date,
+    usuario: order.user_id,
+    cliente: order.customer_name,
+    codigoArticulo: order.article_code,
+    cantidad: order.quantity,
+    precioUnitarioHistorico: order.unit_price,
+    importeTotal: order.total_amount,
+  };
+}
 
 app.use((error, _req, res, _next) => {
   if (error.type === "entity.parse.failed") {

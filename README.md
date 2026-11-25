@@ -31,7 +31,29 @@ Variables requeridas: `DATABASE_URL` (conexión PostgreSQL) y `JWT_SECRET` (la m
 
 - `GET /health`: estado del servicio y PostgreSQL.
 - `GET /catalog/articles` y `GET /catalog/articles/:code`: consulta del catálogo.
-- `POST /orders`: crea un pedido autenticado con JWT de usuario activo. Recibe `{ "cliente": "...", "codigoArticulo": "...", "cantidad": 1 }`; valida y descuenta stock en una transacción con bloqueo `SELECT FOR UPDATE`, y guarda el precio histórico y el total.
+- `GET /catalog/recommendations`: recomienda hasta seis artículos disponibles al usuario autenticado. Compara los artículos de su historial con los de otros usuarios y, si aún no hay compras similares, prioriza los artículos más comprados. No requiere proveedor ni envía datos fuera del servicio.
+- `POST /orders`: crea un pedido autenticado con JWT de usuario activo. Recibe `{ "cliente": "...", "codigoArticulo": "...", "cantidad": 1 }`; valida y descuenta stock en una transacción con bloqueo `SELECT FOR UPDATE`, y guarda el precio histórico y el total. Opcionalmente acepta `Idempotency-Key` (1–128 caracteres ASCII imprimibles sin espacios), que debe reutilizarse en reintentos de la misma operación. La clave se limita a cada usuario: repetirla con los mismos datos devuelve el pedido original sin volver a descontar stock; reutilizarla con datos distintos devuelve `409`. Sin este encabezado, se conserva el comportamiento actual.
+
+El catálogo de la aplicación muestra recomendaciones personalizadas mediante filtrado colaborativo local basado en el historial de pedidos. Para usuarios sin historial, usa la popularidad general; si todavía no hay pedidos, muestra artículos disponibles. A medida que crecen los pedidos, las sugerencias pueden mejorar sin agregar dependencias ni servicios externos.
+
+Para permitir reintentos seguros, cada operación debe usar un identificador estable y único:
+
+```sh
+curl -X POST http://localhost:3001/orders \
+  -H 'Authorization: Bearer <JWT>' \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: compra-<identificador-unico>' \
+  -d '{"cliente":"Usuario de prueba","codigoArticulo":"ART-001","cantidad":1}'
+```
+
+Al usar una base PostgreSQL ya inicializada, aplicar la actualización de esquema sin volver a ejecutar `init.sql` (que también vuelve a cargar los artículos de ejemplo):
+
+```sh
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -c 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)' \
+  -c 'CREATE UNIQUE INDEX IF NOT EXISTS orders_user_id_idempotency_key_idx ON orders (user_id, idempotency_key)' \
+  -c 'CREATE INDEX IF NOT EXISTS orders_article_code_user_id_idx ON orders (article_code, user_id)'
+```
 
 ## Levantar el MVP con Docker Compose
 

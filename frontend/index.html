@@ -48,6 +48,12 @@
         <div class="card" id="catalog-section" style="display: none;">
             <h2>Catálogo de Artículos</h2>
             <button onclick="logout()" style="background-color: #dc3545; margin-bottom: 15px;">Cerrar Sesión</button>
+            <section aria-labelledby="recommendations-heading">
+                <h3 id="recommendations-heading">Recomendados para ti</h3>
+                <p id="recommendations-message" aria-live="polite"></p>
+                <div class="grid" id="recommendations-grid"></div>
+            </section>
+            <h3>Todos los artículos</h3>
             <div class="grid" id="articles-grid"></div>
         </div>
 
@@ -59,6 +65,6 @@
             <p id="no-pending-users" style="display: none;">No hay cuentas pendientes.</p>
         </div>
     </div>
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=3"></script>
 </body>
 </html>

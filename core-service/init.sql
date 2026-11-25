@@ -41,8 +41,15 @@ CREATE TABLE IF NOT EXISTS orders (
     article_code VARCHAR(64) NOT NULL REFERENCES articles(code),
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     unit_price NUMERIC(12, 2) NOT NULL CHECK (unit_price >= 0),
-    total_amount NUMERIC(14, 2) NOT NULL CHECK (total_amount >= 0)
+    total_amount NUMERIC(14, 2) NOT NULL CHECK (total_amount >= 0),
+    idempotency_key VARCHAR(128)
 );
 
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128);
+
 CREATE INDEX IF NOT EXISTS orders_user_id_idx ON orders (user_id);
+CREATE INDEX IF NOT EXISTS orders_article_code_user_id_idx
+    ON orders (article_code, user_id);
 CREATE INDEX IF NOT EXISTS orders_order_date_idx ON orders (order_date DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS orders_user_id_idempotency_key_idx
+    ON orders (user_id, idempotency_key);
